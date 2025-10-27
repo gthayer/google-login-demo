@@ -17,9 +17,9 @@ npm install
 3. Click **Create Credentials** > **OAuth client ID**
 4. Select **Web application** as the application type
 5. Add authorized JavaScript origins:
-   - \`http://localhost:3000\`
+   - `http://localhost:3000`
 6. Add authorized redirect URIs:
-   - \`http://localhost:3000\`
+   - `http://localhost:3000`
 7. Copy your **Client ID**
 
 ### 3. Configure Environment
