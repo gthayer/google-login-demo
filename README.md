@@ -6,9 +6,7 @@ A simple Node.js application for testing Google Identity Services.
 
 ### 1. Install Dependencies
 
-\`\`\`bash
-npm install
-\`\`\`
+`npm install`
 
 ### 2. Get Google Client ID
 
