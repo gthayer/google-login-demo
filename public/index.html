@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Google Login Test</title>
+	<style>
+		body {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			min-height: 100vh;
+			margin: 0;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		}
+		.container {
+			background: white;
+			padding: 40px;
+			border-radius: 10px;
+			box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+			text-align: center;
+			max-width: 400px;
+			width: 100%;
+		}
+		h1 {
+			color: #333;
+			margin-bottom: 30px;
+		}
+		#welcome-message {
+			margin-top: 20px;
+			margin-bottom: 20px;
+			font-size: 18px;
+			color: #667eea;
+			min-height: 30px;
+		}
+		.user-info {
+			margin-top: 20px;
+			padding: 15px;
+			background: #f5f5f5;
+			border-radius: 5px;
+		}
+		.user-info img {
+			border-radius: 50%;
+			margin-bottom: 10px;
+		}
+		.user-info p {
+			margin: 5px 0;
+			color: #555;
+		}
+		.logout-btn {
+			margin-top: 15px;
+			padding: 10px 20px;
+			background-color: #db4437;
+			color: white;
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 14px;
+		}
+		.logout-btn:hover {
+			background-color: #c23321;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<h1>Google Login Test</h1>
+		<div id="welcome-message"></div>
+		<div id="g_id_onload"></div>
+		<div id="user-info"></div>
+		<div id="signin-container"></div>
+	</div>
+
+	<script src="https://accounts.google.com/gsi/client" async defer></script>
+	<script>
+		let clientId = '';
+		
+		// Load client ID from server
+		fetch('/config.js')
+			.then(response => response.text())
+			.then(code => {
+				// Parse the config.js to extract the client ID
+				const match = code.match(/window\.GOOGLE_CLIENT_ID\s*=\s*['"](.*?)['"]/);
+				if (match) {
+					clientId = match[1];
+					console.log('Loaded Client ID:', clientId);
+					
+					// Wait for Google Identity Services to load
+					waitForGoogle(() => {
+						if (clientId) {
+							initializeGoogleSignIn();
+						} else {
+							document.getElementById('welcome-message').textContent = 'Error: Client ID not configured';
+						}
+					});
+				} else {
+					document.getElementById('welcome-message').textContent = 'Error: Could not parse client ID';
+				}
+			})
+			.catch(error => {
+				console.error('Error loading config:', error);
+				document.getElementById('welcome-message').textContent = 'Error: Could not load configuration';
+			});
+
+		function waitForGoogle(callback) {
+			if (window.google && window.google.accounts && window.google.accounts.id) {
+				callback();
+			} else {
+				setTimeout(() => waitForGoogle(callback), 100);
+			}
+		}
+
+		function initializeGoogleSignIn() {
+			console.log('Initializing Google Sign-In with client ID:', clientId);
+			google.accounts.id.initialize({
+				client_id: clientId,
+				callback: handleCredentialResponse
+			});
+			
+			google.accounts.id.renderButton(
+				document.getElementById('signin-container'),
+				{ 
+					theme: 'outline',
+					size: 'large',
+					text: 'sign_in_with',
+					width: 250
+				}
+			);
+		}
+
+		function handleCredentialResponse(response) {
+			// Decode the JWT token to get user info
+			const base64Url = response.credential.split('.')[1];
+			const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+			const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+				return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+			}).join(''));
+
+			const userData = JSON.parse(jsonPayload);
+			
+			// Display welcome message
+			document.getElementById('welcome-message').innerHTML = `<strong>Hello ${userData.given_name || userData.name || 'User'}!</strong>`;
+			
+			// Display user info
+			const userInfoDiv = document.getElementById('user-info');
+			userInfoDiv.innerHTML = `
+				<div class="user-info">
+					${userData.picture ? `<img src="${userData.picture}" alt="Profile Picture" width="80" height="80">` : ''}
+					<p><strong>Name:</strong> ${userData.name}</p>
+					<p><strong>Email:</strong> ${userData.email}</p>
+					<p><strong>Email Verified:</strong> ${userData.email_verified ? 'Yes' : 'No'}</p>
+				</div>
+				<button class="logout-btn" onclick="logout()">Logout</button>
+			`;
+			
+			// Hide the sign-in container
+			document.getElementById('signin-container').style.display = 'none';
+			
+			console.log('Sign in successful:', userData);
+		}
+
+		function logout() {
+			document.getElementById('welcome-message').textContent = '';
+			document.getElementById('user-info').innerHTML = '';
+			document.getElementById('signin-container').style.display = 'block';
+		}
+	</script>
+</body>
+</html>
